@@ -31,8 +31,7 @@ export async function POST(request: Request) {
 
     const fileName = crypto.randomUUID();
 
-    const cliPath = path.resolve(__dirname, `../../../../../public/yt-dlp.cli`);
-    const downloadPath = path.resolve(__dirname, `../../../../../downloads`);
+    const cliPath = path.resolve(`public/yt-dlp.cli`);
     const download = await promisify(exec)(
       `${cliPath} -o "downloads/${fileName}.mp4" -f "bestvideo[ext=mp4]" ${_body.url}`
     );
