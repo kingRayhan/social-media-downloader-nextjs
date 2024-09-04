@@ -2,8 +2,13 @@ import path from "path";
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import fs from "node:fs/promises";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import z from "zod";
-import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  GetObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 const s3Client = new S3Client({
   region: process.env.AWS_REGION!,
@@ -26,10 +31,7 @@ export async function POST(request: Request) {
 
     const fileName = crypto.randomUUID();
 
-    const cliPath = path.resolve(
-      __dirname,
-      `../../../../../src/cli/yt-dlp.cli`
-    );
+    const cliPath = path.resolve(__dirname, `../../../../../cli/yt-dlp.cli`);
     const downloadPath = path.resolve(__dirname, `../../../../../downloads`);
     const download = await promisify(exec)(
       `${cliPath} -o "downloads/${fileName}.mp4" -f "bestvideo[ext=mp4]" ${_body.url}`
@@ -49,8 +51,19 @@ export async function POST(request: Request) {
 
     // response s3 url
     await s3Client.send(command);
+
+    // const getObjectCommand = s3Client.
+    const signedUrl = await getSignedUrl(
+      s3Client,
+      new GetObjectCommand({
+        Bucket: "social-media-downloader-test-return0",
+        Key: `${fileName}.mp4`,
+      }),
+      { expiresIn: 100 }
+    );
+
     const response = {
-      doanloadUrl: `https://social-media-downloader-test-return0.s3.ap-southeast-1.amazonaws.com/${fileName}.mp4`,
+      downloadUrl: signedUrl,
     };
     await fs.unlink(downloadedFile!);
     return Response.json(response);
