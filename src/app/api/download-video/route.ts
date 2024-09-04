@@ -28,24 +28,23 @@ export async function POST(request: Request) {
     const _body = schema.parse(body, {});
 
     // download content locally
+    const fileName = `${crypto.randomUUID()}.mp4`;
 
-    const fileName = crypto.randomUUID();
-
-    const cliPath = path.resolve(`public/yt-dlp.cli`);
+    const cliPath = path.resolve("public/yt-dlp.cli");
     const download = await promisify(exec)(
-      `${cliPath} -o "downloads/${fileName}.mp4" -f "bestvideo[ext=mp4]" ${_body.url}`
+      `${cliPath} -o "downloads/${fileName}" -f "bestvideo[ext=mp4]" ${_body.url}`
     );
 
     const match = download.stdout.match(/Destination: (.+)/);
     const downloadedFile = match && match[1].trim();
 
-    console.log({ downloadedFile });
+    console.log({ downloadedFile, fileName });
 
     // upload content to s3
     const command = new PutObjectCommand({
       Bucket: "social-media-downloader-test-return0",
       Body: await fs.readFile(downloadedFile!),
-      Key: `${fileName}.mp4`,
+      Key: fileName,
     });
 
     // response s3 url
@@ -56,13 +55,14 @@ export async function POST(request: Request) {
       s3Client,
       new GetObjectCommand({
         Bucket: "social-media-downloader-test-return0",
-        Key: `${fileName}.mp4`,
+        Key: fileName,
       }),
-      { expiresIn: 100 }
+      { expiresIn: 60 * 60 * 24 }
     );
 
     const response = {
       downloadUrl: signedUrl,
+      fileName,
     };
     await fs.unlink(downloadedFile!);
     return Response.json(response);
