@@ -26,7 +26,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "**/*.cli"
+    "src/app/api/download-video/yt-dlp.cli"
   ],
   "exclude": ["node_modules"]
 }
